@@ -25,16 +25,17 @@ var tags = {
 }
 
 // the containing resource group
-resource group 'Microsoft.Resources/resourceGroups@2022-09-01' = {
+resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
   name: 'rg-${environmentName}'
   location: location
   tags: tags
 }
 
+
 // create the openai and storage resources
-module dependencies 'dependencies.bicep' = {
+module dependencies './dependencies.bicep' = {
   name: 'app${resourceToken}'
-  scope: group
+  scope: rg
   params: {
     location: location
     environmentName: environmentName
@@ -42,22 +43,27 @@ module dependencies 'dependencies.bicep' = {
   }
 }
 
+
+
 // output environment variables
 output AZURE_CLIENT_ID string = dependencies.outputs.AZURE_CLIENT_ID
 output AZUREOPENAI_ENDPOINT string = dependencies.outputs.AZUREOPENAI_ENDPOINT
-output AZUREOPENAI_API_KEY string = dependencies.outputs.AZUREOPENAI_KEY
+output AZUREOPENAI_API_KEY string = dependencies.outputs.AZURE_OPENAI_KEY
 output AZUREOPENAI_GPT_NAME string = dependencies.outputs.AI_GPT_DEPLOYMENT_NAME
 output AZUREOPENAI_TEXT_EMBEDDING_NAME string = dependencies.outputs.AI_TEXT_DEPLOYMENT_NAME
 output ConnectionStrings__AzureQueues string = dependencies.outputs.AZURE_QUEUE_ENDPOINT
 output ConnectionStrings__AzureBlobs string = dependencies.outputs.AZURE_BLOB_ENDPOINT
 
 // create the container apps environment if requested
-module containers 'containers.bicep' = if(createContainerApps) {
-  name: 'app${resourceToken}'
-  scope: group
+module containers './containers.bicep' = if(createContainerApps) {
+  name: 'containerapps'
+  scope: rg
   params: {
     location: location
     environmentName: environmentName
+    principalId: dependencies.outputs.principalId
   }
 }
+
 output AZURE_CONTAINER_REGISTRY string = ((createContainerApps) ? containers.outputs.AZURE_CONTAINER_REGISTRY : '')
+
