@@ -43,17 +43,6 @@ module dependencies './dependencies.bicep' = {
   }
 }
 
-
-
-// output environment variables
-output AZURE_CLIENT_ID string = dependencies.outputs.AZURE_CLIENT_ID
-output AZUREOPENAI_ENDPOINT string = dependencies.outputs.AZUREOPENAI_ENDPOINT
-output AZUREOPENAI_API_KEY string = dependencies.outputs.AZURE_OPENAI_KEY
-output AZUREOPENAI_GPT_NAME string = dependencies.outputs.AI_GPT_DEPLOYMENT_NAME
-output AZUREOPENAI_TEXT_EMBEDDING_NAME string = dependencies.outputs.AI_TEXT_DEPLOYMENT_NAME
-output ConnectionStrings__AzureQueues string = dependencies.outputs.AZURE_QUEUE_ENDPOINT
-output ConnectionStrings__AzureBlobs string = dependencies.outputs.AZURE_BLOB_ENDPOINT
-
 // create the container apps environment if requested
 module containers './containers.bicep' = if(createContainerApps) {
   name: 'containerapps'
@@ -65,5 +54,13 @@ module containers './containers.bicep' = if(createContainerApps) {
   }
 }
 
+// output environment variables
+output AZURE_CLIENT_ID string = dependencies.outputs.AZURE_CLIENT_ID
+output AZUREOPENAI_ENDPOINT string = dependencies.outputs.AZUREOPENAI_ENDPOINT
+output AZUREOPENAI_API_KEY string = dependencies.outputs.AZURE_OPENAI_KEY
+output AZUREOPENAI_GPT_NAME string = dependencies.outputs.AI_GPT_DEPLOYMENT_NAME
+output AZUREOPENAI_TEXT_EMBEDDING_NAME string = dependencies.outputs.AI_TEXT_DEPLOYMENT_NAME
+output ConnectionStrings__AzureQueues string = dependencies.outputs.AZURE_QUEUE_ENDPOINT
+output ConnectionStrings__AzureBlobs string = dependencies.outputs.AZURE_BLOB_ENDPOINT
 output AZURE_CONTAINER_REGISTRY string = ((createContainerApps) ? containers.outputs.AZURE_CONTAINER_REGISTRY : '')
 
