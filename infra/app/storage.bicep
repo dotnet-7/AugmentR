@@ -19,7 +19,7 @@ var tags = {
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
 
 // storage account for blobs and queues
-module storage './core/storage/storage-account.bicep' = {
+module storage '../core/storage/storage-account.bicep' = {
   name: 'storage'
   params: {
     name: 'strg${resourceToken}'
@@ -47,7 +47,7 @@ var strgQueRole = '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
 var principalId = identity.properties.principalId
 
 // storage role for blobs
-module blobRoleAssignment './core/security/role.bicep' = {
+module blobRoleAssignment '../core/security/role.bicep' = {
   name: guid(resourceId(subscription().subscriptionId,resourceGroup().name,'Microsoft.Storage/storageAccounts','strg${resourceToken}'), identity.id, strgBlbRole)
   params: {
     roleDefinitionId: strgBlbRole
@@ -59,7 +59,7 @@ module blobRoleAssignment './core/security/role.bicep' = {
   ]
 }
 
-module blobRoleAssignmentForMe './core/security/role.bicep' = {
+module blobRoleAssignmentForMe '../core/security/role.bicep' = {
   name: guid(resourceId(subscription().subscriptionId,resourceGroup().name,'Microsoft.Storage/storageAccounts','strg${resourceToken}'), myUserId, strgBlbRole)
   params: {
     roleDefinitionId: strgBlbRole
@@ -72,7 +72,7 @@ module blobRoleAssignmentForMe './core/security/role.bicep' = {
 }
 
 // storage role for queues
-module queueRoleAssignment './core/security/role.bicep' = {
+module queueRoleAssignment '../core/security/role.bicep' = {
   name: guid(resourceId(subscription().subscriptionId,resourceGroup().name,'Microsoft.Storage/storageAccounts','strg${resourceToken}'), identity.id, strgQueRole)
   params: {
     roleDefinitionId: strgQueRole
@@ -84,7 +84,7 @@ module queueRoleAssignment './core/security/role.bicep' = {
   ]
 }
 
-module queueRoleAssignmentForMe './core/security/role.bicep' = {
+module queueRoleAssignmentForMe '../core/security/role.bicep' = {
   name: guid(resourceId(subscription().subscriptionId,resourceGroup().name,'Microsoft.Storage/storageAccounts','strg${resourceToken}'), myUserId, strgQueRole)
   params: {
     roleDefinitionId: strgQueRole

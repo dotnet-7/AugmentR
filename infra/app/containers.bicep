@@ -18,7 +18,7 @@ var resourceToken = toLower(uniqueString(subscription().id, environmentName, loc
 var identityName = 'id${resourceToken}'
 
 // loganalytics workspace and application insights
-module monitor './core/monitor/monitoring.bicep' = {
+module monitor '../core/monitor/monitoring.bicep' = {
   name: 'monitor'
   params: {
     location: location
@@ -30,7 +30,7 @@ module monitor './core/monitor/monitoring.bicep' = {
 }
 
 // container apps host (including container registry)
-module containerApps './core/host/container-apps.bicep' = {
+module containerApps '../core/host/container-apps.bicep' = {
   name: 'container-apps'
   params: {
     name: 'app'
@@ -43,7 +43,7 @@ module containerApps './core/host/container-apps.bicep' = {
 }
 
 // create the redis container apps
-module redis './core/host/container-app.bicep' = {
+module redis '../core/host/container-app.bicep' = {
   name: 'redis'
   params: {
     name: 'rd${resourceToken}'
@@ -59,7 +59,7 @@ module redis './core/host/container-app.bicep' = {
 }
 
 // create the postgres container apps
-module postgres './core/host/container-app.bicep' = {
+module postgres '../core/host/container-app.bicep' = {
   name: 'postgres'
   params: {
     name: 'pg${resourceToken}'
@@ -75,7 +75,7 @@ module postgres './core/host/container-app.bicep' = {
 }
 
 // create the qdrant container apps
-module qdrant './core/host/container-app.bicep' = {
+module qdrant '../core/host/container-app.bicep' = {
   name: 'qdrant'
   params: {
     name: 'qdrant${resourceToken}'
@@ -92,7 +92,7 @@ module qdrant './core/host/container-app.bicep' = {
 }
 
 // allow acr pulls to the identity used for the aca's
-module acrRole './core/security/registry-access.bicep' = {
+module acrRole '../core/security/registry-access.bicep' = {
   name: 'acrRole'
   params: {
     containerRegistryName: containerApps.outputs.registryName
