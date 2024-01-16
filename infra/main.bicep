@@ -24,6 +24,34 @@ var tags = {
   'azd-env-name': environmentName
 }
 
+// the openai deployments to create
+var openaiDeployment = [
+  {
+    name: 'gpt${resourceToken}'
+    sku: {
+      name: 'Standard'
+      capacity: 2
+    }
+    model: {
+      format: 'OpenAI'
+      name: 'gpt-35-turbo'
+      version: '0301'
+    }
+  }
+  {
+    name: 'text${resourceToken}'
+    sku: {
+      name: 'Standard'
+      capacity: 5
+    }
+    model: {
+      format: 'OpenAI'
+      name: 'text-embedding-ada-002'
+      version: '2'
+    }
+  }
+]
+
 // the containing resource group
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
   name: 'rg-${environmentName}'
@@ -31,8 +59,19 @@ resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
   tags: tags
 }
 
+// create the openai resources
+module openAi './core/ai/cognitiveservices.bicep' = {
+  name: 'openai'
+  scope: rg
+  params: {
+    name: 'openai-${resourceToken}'
+    location: location
+    tags: tags
+    deployments: openaiDeployment
+  }
+}
 
-// create the openai and storage resources
+// create the storage resources
 module dependencies './dependencies.bicep' = {
   name: 'app${resourceToken}'
   scope: rg
@@ -41,11 +80,14 @@ module dependencies './dependencies.bicep' = {
     environmentName: environmentName
     myUserId: myUserId
   }
+  dependsOn:[
+    openAi
+  ]
 }
 
 // create the container apps environment if requested
 module containers './containers.bicep' = if(createContainerApps) {
-  name: 'containerapps'
+  name: 'aca${resourceToken}'
   scope: rg
   params: {
     location: location
@@ -56,7 +98,7 @@ module containers './containers.bicep' = if(createContainerApps) {
 
 // output environment variables
 output AZURE_CLIENT_ID string = dependencies.outputs.AZURE_CLIENT_ID
-output AZUREOPENAI_ENDPOINT string = dependencies.outputs.AZUREOPENAI_ENDPOINT
+output AZUREOPENAI_ENDPOINT string = openAi.outputs.endpoint
 output AZUREOPENAI_API_KEY string = dependencies.outputs.AZURE_OPENAI_KEY
 output AZUREOPENAI_GPT_NAME string = dependencies.outputs.AI_GPT_DEPLOYMENT_NAME
 output AZUREOPENAI_TEXT_EMBEDDING_NAME string = dependencies.outputs.AI_TEXT_DEPLOYMENT_NAME

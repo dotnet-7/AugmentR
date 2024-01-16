@@ -18,42 +18,7 @@ var tags = {
 // resource token for naming each resource randomly, reliably
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
 
-//create the openai resources
-module openAi './core/ai/cognitiveservices.bicep' = {
-  name: 'openai'
-  params: {
-    name: 'openai-${resourceToken}'
-    location: location
-    tags: tags
-    deployments:[
-      {
-        name: 'gpt${resourceToken}'
-        sku: {
-          name: 'Standard'
-          capacity: 2
-        }
-        model: {
-          format: 'OpenAI'
-          name: 'gpt-35-turbo'
-          version: '0301'
-        }
-      }
-      {
-        name: 'text${resourceToken}'
-        sku: {
-          name: 'Standard'
-          capacity: 1
-        }
-        model: {
-          format: 'OpenAI'
-          name: 'text-embedding-ada-002'
-          version: '2'
-        }
-      }
-    ]
-  }
-}
-
+// storage account for blobs and queues
 module storage './core/storage/storage-account.bicep' = {
   name: 'storage'
   params: {
@@ -68,6 +33,7 @@ module storage './core/storage/storage-account.bicep' = {
   }
 }
 
+// identity for the container apps
 resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'id${resourceToken}'
   location: location
@@ -130,12 +96,15 @@ module queueRoleAssignmentForMe './core/security/role.bicep' = {
   ]
 }
 
+resource openai 'Microsoft.CognitiveServices/accounts@2023-05-01' existing = {
+  name: 'openai-${resourceToken}'
+}
+
 // output environment variables
 output principalId string = principalId
-output AZUREOPENAI_ENDPOINT string = openAi.outputs.endpoint
 output AI_GPT_DEPLOYMENT_NAME string = 'gpt${resourceToken}'
 output AI_TEXT_DEPLOYMENT_NAME string = 'text${resourceToken}'
 output AZURE_CLIENT_ID string = identity.properties.clientId
 output AZURE_BLOB_ENDPOINT string = 'https://${storage.outputs.name}.blob.core.windows.net/'
 output AZURE_QUEUE_ENDPOINT string = 'https://${storage.outputs.name}.queue.core.windows.net/'
-output AZURE_OPENAI_KEY string = openAi.outputs.key
+output AZURE_OPENAI_KEY string = openai.listKeys().key1

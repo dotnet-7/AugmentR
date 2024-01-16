@@ -17,7 +17,7 @@ var tags = {
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
 var identityName = 'id${resourceToken}'
 
-
+// loganalytics workspace and application insights
 module monitor './core/monitor/monitoring.bicep' = {
   name: 'monitor'
   params: {
@@ -29,7 +29,7 @@ module monitor './core/monitor/monitoring.bicep' = {
   }
 }
 
-// Container apps host (including container registry)
+// container apps host (including container registry)
 module containerApps './core/host/container-apps.bicep' = {
   name: 'container-apps'
   params: {
