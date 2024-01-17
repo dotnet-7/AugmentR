@@ -17,7 +17,7 @@ param myUserId string
 param createContainerApps bool = false
 
 @description('Name of the openai key secret in the keyvault')
-param secretName string = 'openai-key'
+param openAIKeyName string = 'AZURE-OPEN-AI-KEY'
 
 // resource token for naming each resource randomly, reliably
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
@@ -80,8 +80,8 @@ module storage './app/storage.bicep' = {
   scope: rg
   params: {
     location: location
-    keyvaultName: keyvault.outputs.name
-    secretName: secretName
+    keyVaultName: keyvault.outputs.name
+    openAIKeyName: openAIKeyName
     environmentName: environmentName
     myUserId: myUserId
   }
@@ -116,7 +116,7 @@ module containers './app/containers.bicep' = if(createContainerApps) {
 // output environment variables
 output KEYVAULT_ENDPOINT string = keyvault.outputs.endpoint
 output AZURE_CLIENT_ID string = storage.outputs.AZURE_CLIENT_ID
-output AZUREOPENAI_SECRET_NAME string = secretName
+output AZUREOPENAI_KEY_NAME string = openAIKeyName
 output AZUREOPENAI_ENDPOINT string = openAi.outputs.endpoint
 output AZUREOPENAI_GPT_NAME string = storage.outputs.AI_GPT_DEPLOYMENT_NAME
 output AZUREOPENAI_TEXT_EMBEDDING_NAME string = storage.outputs.AI_TEXT_DEPLOYMENT_NAME

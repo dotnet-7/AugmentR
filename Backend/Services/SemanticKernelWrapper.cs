@@ -22,7 +22,7 @@ public class SemanticKernelWrapper(IConfiguration configuration,
     private string _gptDeploymentName = configuration["AZUREOPENAI_GPT_NAME"] ?? string.Empty;
     private string _textEmbeddingDeploymentName = configuration["AZUREOPENAI_TEXT_EMBEDDING_NAME"] ?? string.Empty;
     private string _openAiEndpoint = configuration["AZUREOPENAI_ENDPOINT"] ?? string.Empty;
-    private string _openAiSecret = configuration["AZUREOPENAI_SECRET_NAME"] ?? string.Empty;
+    private string _openAiSecret = configuration["AZUREOPENAI_KEY_NAME"] ?? string.Empty;
     private string _keyVaultEndpoint = configuration["KEYVAULT_ENDPOINT"] ?? string.Empty;
     private string _openAiKey;
     private ISemanticTextMemory? _semanticTextMemory = null;

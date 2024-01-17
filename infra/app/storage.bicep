@@ -12,10 +12,10 @@ param location string
 param myUserId string
 
 @description('Name of the keyvault to store secrets')
-param keyvaultName string
+param keyVaultName string
 
 @description('Name of the openai key secret in the keyvault')
-param secretName string
+param openAIKeyName string
 
 var tags = {
   'azd-env-name': environmentName
@@ -103,11 +103,11 @@ module queueRoleAssignmentForMe '../core/security/role.bicep' = {
 }
 
 // create secret to store openai api key
-module openAiKey '../core/security/keyvault-secret.bicep' = {
+module openAIKey '../core/security/keyvault-secret.bicep' = {
   name: 'openai-key'
   params: {
-    name: secretName
-    keyVaultName: keyvaultName
+    name: openAIKeyName
+    keyVaultName: keyVaultName
     secretValue: listKeys(resourceId(subscription().subscriptionId, resourceGroup().name, 'Microsoft.CognitiveServices/accounts', 'openai-${resourceToken}'), '2023-05-01').key1
   }
 }
