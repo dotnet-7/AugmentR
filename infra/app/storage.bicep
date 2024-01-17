@@ -8,8 +8,14 @@ param environmentName string
 param location string
 
 @minLength(1)
-@description('String representing the ID of the logged-in user. Get this using ')
+@description('String representing the ID of the logged-in user. Get this using')
 param myUserId string
+
+@description('Name of the keyvault to store secrets')
+param keyvaultName string
+
+@description('Name of the openai key secret in the keyvault')
+param secretName string
 
 var tags = {
   'azd-env-name': environmentName
@@ -96,8 +102,14 @@ module queueRoleAssignmentForMe '../core/security/role.bicep' = {
   ]
 }
 
-resource openai 'Microsoft.CognitiveServices/accounts@2023-05-01' existing = {
-  name: 'openai-${resourceToken}'
+// create secret to store openai api key
+module openAiKey '../core/security/keyvault-secret.bicep' = {
+  name: 'openai-key'
+  params: {
+    name: secretName
+    keyVaultName: keyvaultName
+    secretValue: listKeys(resourceId(subscription().subscriptionId, resourceGroup().name, 'Microsoft.CognitiveServices/accounts', 'openai-${resourceToken}'), '2023-05-01').key1
+  }
 }
 
 // output environment variables
@@ -107,4 +119,3 @@ output AI_TEXT_DEPLOYMENT_NAME string = 'text${resourceToken}'
 output AZURE_CLIENT_ID string = identity.properties.clientId
 output AZURE_BLOB_ENDPOINT string = 'https://${storage.outputs.name}.blob.core.windows.net/'
 output AZURE_QUEUE_ENDPOINT string = 'https://${storage.outputs.name}.queue.core.windows.net/'
-output AZURE_OPENAI_KEY string = openai.listKeys().key1

@@ -16,6 +16,9 @@ param myUserId string
 @description('Defines if only the dependencies (OpenAI and Storage) are created, or if the container apps are also created.')
 param createContainerApps bool = false
 
+@description('Name of the openai key secret in the keyvault')
+param secretName string = 'openai-key'
+
 // resource token for naming each resource randomly, reliably
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
 
@@ -77,12 +80,26 @@ module storage './app/storage.bicep' = {
   scope: rg
   params: {
     location: location
+    keyvaultName: keyvault.outputs.name
+    secretName: secretName
     environmentName: environmentName
     myUserId: myUserId
   }
   dependsOn:[
     openAi
   ]
+}
+
+// create a keyvault to store openai secrets
+module keyvault './core/security/keyvault.bicep' = {
+  name: 'keyvault'
+  scope: rg
+  params: {
+    name: 'kv-${resourceToken}'
+    location: location
+    tags: tags
+    principalId: myUserId
+  }
 }
 
 // create the container apps environment if requested
@@ -97,9 +114,10 @@ module containers './app/containers.bicep' = if(createContainerApps) {
 }
 
 // output environment variables
+output KEYVAULT_ENDPOINT string = keyvault.outputs.endpoint
 output AZURE_CLIENT_ID string = storage.outputs.AZURE_CLIENT_ID
+output AZUREOPENAI_SECRET_NAME string = secretName
 output AZUREOPENAI_ENDPOINT string = openAi.outputs.endpoint
-output AZUREOPENAI_API_KEY string = storage.outputs.AZURE_OPENAI_KEY
 output AZUREOPENAI_GPT_NAME string = storage.outputs.AI_GPT_DEPLOYMENT_NAME
 output AZUREOPENAI_TEXT_EMBEDDING_NAME string = storage.outputs.AI_TEXT_DEPLOYMENT_NAME
 output ConnectionStrings__AzureQueues string = storage.outputs.AZURE_QUEUE_ENDPOINT

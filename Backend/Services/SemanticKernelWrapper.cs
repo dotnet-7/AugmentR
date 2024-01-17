@@ -7,6 +7,9 @@ using Microsoft.SemanticKernel.Text;
 using System.Net;
 using System.Text.RegularExpressions;
 
+using Azure.Identity;  
+using Azure.Security.KeyVault.Secrets;  
+
 namespace Backend.Services;
 
 public class SemanticKernelWrapper(IConfiguration configuration,
@@ -19,7 +22,9 @@ public class SemanticKernelWrapper(IConfiguration configuration,
     private string _gptDeploymentName = configuration["AZUREOPENAI_GPT_NAME"] ?? string.Empty;
     private string _textEmbeddingDeploymentName = configuration["AZUREOPENAI_TEXT_EMBEDDING_NAME"] ?? string.Empty;
     private string _openAiEndpoint = configuration["AZUREOPENAI_ENDPOINT"] ?? string.Empty;
-    private string _openAiKey = configuration["AZUREOPENAI_API_KEY"] ?? string.Empty;
+    private string _openAiSecret = configuration["AZUREOPENAI_SECRET_NAME"] ?? string.Empty;
+    private string _keyVaultEndpoint = configuration["KEYVAULT_ENDPOINT"] ?? string.Empty;
+    private string _openAiKey;
     private ISemanticTextMemory? _semanticTextMemory = null;
     private IKernel? SemanticKernel = null;
     private IChatCompletion? _chatCompletion = null;
@@ -43,9 +48,14 @@ public class SemanticKernelWrapper(IConfiguration configuration,
             _logger.LogError("The app needs to be configured with an Azure OpenAI endpoint.");
             return false;
         }
-        if (string.IsNullOrEmpty(_openAiKey))
+        if (string.IsNullOrEmpty(_openAiSecret))
         {
-            _logger.LogError("The app needs to be configured with an Azure OpenAI key.");
+            _logger.LogError("The app needs to be configured with an Azure OpenAI key secret name.");
+            return false;
+        }
+        if (string.IsNullOrEmpty(_keyVaultEndpoint))
+        {
+            _logger.LogError("The app needs to be configured with an Azure keyvault endpoint.");
             return false;
         }
 
@@ -61,6 +71,10 @@ public class SemanticKernelWrapper(IConfiguration configuration,
             try
             {
                 _logger.LogInformation("Semantic Kernel starting.");
+
+                SecretClient client = new SecretClient(new Uri(_keyVaultEndpoint), new DefaultAzureCredential());
+                var openaikey = await client.GetSecretAsync(_openAiSecret);
+                _openAiKey = openaikey.Value.Value;
 
                 SemanticKernel = new KernelBuilder()
                     .WithLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()))
