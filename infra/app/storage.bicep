@@ -9,13 +9,22 @@ param location string
 
 @minLength(1)
 @description('String representing the ID of the logged-in user. Get this using')
-param myUserId string
+param principalId string
 
 @description('Name of the keyvault to store secrets')
 param keyVaultName string
 
 @description('Name of the openai key secret in the keyvault')
 param openAIKeyName string
+
+@description('Name of the identity to create')
+param identityName string
+
+@description('Name of the storage account to create')
+param storageName string
+
+@description('Name of the openai deployment')
+param openAIName string
 
 var tags = {
   'azd-env-name': environmentName
@@ -28,7 +37,7 @@ var resourceToken = toLower(uniqueString(subscription().id, environmentName, loc
 module storage '../core/storage/storage-account.bicep' = {
   name: 'storage'
   params: {
-    name: 'strg${resourceToken}'
+    name: storageName
     location: location
     tags: tags
     sku: {
@@ -41,7 +50,7 @@ module storage '../core/storage/storage-account.bicep' = {
 
 // identity for the container apps
 resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: 'id${resourceToken}'
+  name: identityName
   location: location
   tags: tags
 }
@@ -50,56 +59,42 @@ resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' 
 var strgBlbRole = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
 var strgQueRole = '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
 
-var principalId = identity.properties.principalId
-
 // storage role for blobs
 module blobRoleAssignment '../core/security/role.bicep' = {
-  name: guid(resourceId(subscription().subscriptionId,resourceGroup().name,'Microsoft.Storage/storageAccounts','strg${resourceToken}'), identity.id, strgBlbRole)
+  name: 'blob-role-identity'
   params: {
     roleDefinitionId: strgBlbRole
     principalType: 'ServicePrincipal'
-    principalId: principalId
+    principalId: identity.properties.principalId
   }
-  dependsOn:[
-    storage
-  ]
 }
 
 module blobRoleAssignmentForMe '../core/security/role.bicep' = {
-  name: guid(resourceId(subscription().subscriptionId,resourceGroup().name,'Microsoft.Storage/storageAccounts','strg${resourceToken}'), myUserId, strgBlbRole)
+  name: 'blob-role-user'
   params: {
     roleDefinitionId: strgBlbRole
     principalType: 'User'
-    principalId: myUserId
+    principalId: principalId
   }
-  dependsOn:[
-    storage
-  ]
 }
 
 // storage role for queues
 module queueRoleAssignment '../core/security/role.bicep' = {
-  name: guid(resourceId(subscription().subscriptionId,resourceGroup().name,'Microsoft.Storage/storageAccounts','strg${resourceToken}'), identity.id, strgQueRole)
+  name: 'queue-role-identity'
   params: {
     roleDefinitionId: strgQueRole
     principalType: 'ServicePrincipal'
-    principalId: principalId
+    principalId: identity.properties.principalId
   }
-  dependsOn:[
-    storage
-  ]
 }
 
 module queueRoleAssignmentForMe '../core/security/role.bicep' = {
-  name: guid(resourceId(subscription().subscriptionId,resourceGroup().name,'Microsoft.Storage/storageAccounts','strg${resourceToken}'), myUserId, strgQueRole)
+  name: 'queue-role-user'
   params: {
     roleDefinitionId: strgQueRole
     principalType: 'User'
-    principalId: myUserId
+    principalId: principalId
   }
-  dependsOn:[
-    storage
-  ]
 }
 
 // create secret to store openai api key
@@ -108,14 +103,15 @@ module openAIKey '../core/security/keyvault-secret.bicep' = {
   params: {
     name: openAIKeyName
     keyVaultName: keyVaultName
-    secretValue: listKeys(resourceId(subscription().subscriptionId, resourceGroup().name, 'Microsoft.CognitiveServices/accounts', 'openai-${resourceToken}'), '2023-05-01').key1
+    secretValue: listKeys(resourceId(subscription().subscriptionId, resourceGroup().name, 'Microsoft.CognitiveServices/accounts', openAIName), '2023-05-01').key1
   }
 }
 
 // output environment variables
-output principalId string = principalId
+output principalId string = identity.properties.principalId
 output AI_GPT_DEPLOYMENT_NAME string = 'gpt${resourceToken}'
 output AI_TEXT_DEPLOYMENT_NAME string = 'text${resourceToken}'
 output AZURE_CLIENT_ID string = identity.properties.clientId
 output AZURE_BLOB_ENDPOINT string = 'https://${storage.outputs.name}.blob.core.windows.net/'
 output AZURE_QUEUE_ENDPOINT string = 'https://${storage.outputs.name}.queue.core.windows.net/'
+output identityName string = identity.name

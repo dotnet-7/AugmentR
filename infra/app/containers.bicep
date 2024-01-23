@@ -7,6 +7,14 @@ param environmentName string
 @description('Primary location for all resources')
 param location string
 
+param logAnalyticsName string
+param applicationInsightsName string
+param containerAppsEnvironmentName string
+param containerRegistryName string
+param identityName string
+param keyVaultName string
+
+@description('Principal ID of the identity used for the container apps')
 param principalId string
 
 var tags = {
@@ -15,17 +23,16 @@ var tags = {
 
 // resource token for naming each resource randomly, reliably
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
-var identityName = 'id${resourceToken}'
+
 
 // loganalytics workspace and application insights
 module monitor '../core/monitor/monitoring.bicep' = {
   name: 'monitor'
   params: {
     location: location
-    logAnalyticsName: 'logs${resourceToken}'
-    applicationInsightsName: 'ai${resourceToken}'
+    logAnalyticsName: logAnalyticsName
+    applicationInsightsName: applicationInsightsName
     tags: tags
-    
   }
 }
 
@@ -35,8 +42,8 @@ module containerApps '../core/host/container-apps.bicep' = {
   params: {
     name: 'app'
     location: location
-    containerAppsEnvironmentName: 'acae${resourceToken}'
-    containerRegistryName: 'cr${resourceToken}'
+    containerAppsEnvironmentName: containerAppsEnvironmentName
+    containerRegistryName: containerRegistryName
     logAnalyticsWorkspaceName: monitor.outputs.logAnalyticsWorkspaceName
     tags: tags
   }
@@ -99,6 +106,16 @@ module acrRole '../core/security/registry-access.bicep' = {
     principalId: principalId
   }
 }
+
+//give the container apps access to the keyvault
+module keyvaultRole '../core/security/keyvault-access.bicep' = {
+  name: 'keyvaultRole'
+  params: {
+    keyVaultName: keyVaultName
+    principalId: principalId
+  }
+}
+
 
 // output environment variables
 output AZURE_CONTAINER_REGISTRY string = containerApps.outputs.registryLoginServer

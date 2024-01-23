@@ -9,15 +9,28 @@ param environmentName string
 @description('Primary location for all resources')
 param location string
 
-@minLength(1)
+@description('Names of the resources group. If not provided, a unique name will be generated.')
+param resourceGroupName string = ''
+param openAiServiceName string = ''
+param keyVaultName string = ''
+param identityName string = ''
+param storageName string = ''
+param logAnalyticsName string = ''
+param applicationInsightsName string = ''
+param containerAppsEnvironmentName string = ''
+param containerRegistryName string = ''
+
 @description('String representing the ID of the logged-in user. Get this using ')
-param myUserId string
+param principalId string = ''
 
 @description('Defines if only the dependencies (OpenAI and Storage) are created, or if the container apps are also created.')
 param createContainerApps bool = false
 
 @description('Name of the openai key secret in the keyvault')
 param openAIKeyName string = 'AZURE-OPEN-AI-KEY'
+
+// load the abbreviations for the resource token
+var abbrs = loadJsonContent('./abbreviations.json')
 
 // resource token for naming each resource randomly, reliably
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
@@ -57,7 +70,7 @@ var openaiDeployment = [
 
 // the containing resource group
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
-  name: 'rg-${environmentName}'
+  name: !empty(resourceGroupName) ? resourceGroupName : '${abbrs.resourcesResourceGroups}${environmentName}'
   location: location
   tags: tags
 }
@@ -67,7 +80,7 @@ module openAi './core/ai/cognitiveservices.bicep' = {
   name: 'openai'
   scope: rg
   params: {
-    name: 'openai-${resourceToken}'
+    name: !empty(openAiServiceName) ? openAiServiceName : '${abbrs.cognitiveServicesAccounts}${resourceToken}'
     location: location
     tags: tags
     deployments: openaiDeployment
@@ -76,18 +89,18 @@ module openAi './core/ai/cognitiveservices.bicep' = {
 
 // create the storage resources
 module storage './app/storage.bicep' = {
-  name: 'app${resourceToken}'
+  name: 'app'
   scope: rg
   params: {
     location: location
     keyVaultName: keyvault.outputs.name
     openAIKeyName: openAIKeyName
+    identityName: !empty(identityName) ? identityName : '${abbrs.managedIdentityUserAssignedIdentities}${resourceToken}'
+    storageName: !empty(storageName) ? storageName : '${abbrs.storageStorageAccounts}${resourceToken}'
     environmentName: environmentName
-    myUserId: myUserId
+    openAIName: openAi.outputs.name
+    principalId: principalId
   }
-  dependsOn:[
-    openAi
-  ]
 }
 
 // create a keyvault to store openai secrets
@@ -95,31 +108,37 @@ module keyvault './core/security/keyvault.bicep' = {
   name: 'keyvault'
   scope: rg
   params: {
-    name: 'kv-${resourceToken}'
+    name: !empty(keyVaultName) ? keyVaultName : '${abbrs.keyVaultVaults}${resourceToken}'
     location: location
     tags: tags
-    principalId: myUserId
+    principalId: principalId
   }
 }
 
 // create the container apps environment if requested
 module containers './app/containers.bicep' = if(createContainerApps) {
-  name: 'aca${resourceToken}'
+  name: 'aca'
   scope: rg
   params: {
     location: location
     environmentName: environmentName
     principalId: storage.outputs.principalId
+    identityName: storage.outputs.identityName
+    keyVaultName: keyvault.outputs.name
+    logAnalyticsName: !empty(logAnalyticsName) ? logAnalyticsName : '${abbrs.operationalInsightsWorkspaces}${resourceToken}'
+    applicationInsightsName: !empty(applicationInsightsName) ? applicationInsightsName : '${abbrs.insightsComponents}${resourceToken}'
+    containerAppsEnvironmentName: !empty(containerAppsEnvironmentName) ? containerAppsEnvironmentName : '${abbrs.appManagedEnvironments}${resourceToken}'
+    containerRegistryName: !empty(containerRegistryName) ? containerRegistryName : '${abbrs.containerRegistryRegistries}${resourceToken}'
   }
 }
 
 // output environment variables
-output KEYVAULT_ENDPOINT string = keyvault.outputs.endpoint
+output AZURE_KEY_VAULT_ENDPOINT string = keyvault.outputs.endpoint
 output AZURE_CLIENT_ID string = storage.outputs.AZURE_CLIENT_ID
-output AZUREOPENAI_KEY_NAME string = openAIKeyName
-output AZUREOPENAI_ENDPOINT string = openAi.outputs.endpoint
-output AZUREOPENAI_GPT_NAME string = storage.outputs.AI_GPT_DEPLOYMENT_NAME
-output AZUREOPENAI_TEXT_EMBEDDING_NAME string = storage.outputs.AI_TEXT_DEPLOYMENT_NAME
+output AZURE_OPENAI_KEY_NAME string = openAIKeyName
+output AZURE_OPENAI_ENDPOINT string = openAi.outputs.endpoint
+output AZURE_OPENAI_GPT_NAME string = storage.outputs.AI_GPT_DEPLOYMENT_NAME
+output AZURE_OPENAI_TEXT_EMBEDDING_NAME string = storage.outputs.AI_TEXT_DEPLOYMENT_NAME
 output ConnectionStrings__AzureQueues string = storage.outputs.AZURE_QUEUE_ENDPOINT
 output ConnectionStrings__AzureBlobs string = storage.outputs.AZURE_BLOB_ENDPOINT
 output AZURE_CONTAINER_REGISTRY string = ((createContainerApps) ? containers.outputs.AZURE_CONTAINER_REGISTRY : '')
