@@ -142,4 +142,3 @@ output AZURE_OPENAI_TEXT_EMBEDDING_NAME string = storage.outputs.AI_TEXT_DEPLOYM
 output ConnectionStrings__AzureQueues string = storage.outputs.AZURE_QUEUE_ENDPOINT
 output ConnectionStrings__AzureBlobs string = storage.outputs.AZURE_BLOB_ENDPOINT
 output AZURE_CONTAINER_REGISTRY string = ((createContainerApps) ? containers.outputs.AZURE_CONTAINER_REGISTRY : '')
-

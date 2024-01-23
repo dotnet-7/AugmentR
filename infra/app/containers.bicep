@@ -24,7 +24,6 @@ var tags = {
 // resource token for naming each resource randomly, reliably
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
 
-
 // loganalytics workspace and application insights
 module monitor '../core/monitor/monitoring.bicep' = {
   name: 'monitor'
@@ -115,7 +114,6 @@ module keyvaultRole '../core/security/keyvault-access.bicep' = {
     principalId: principalId
   }
 }
-
 
 // output environment variables
 output AZURE_CONTAINER_REGISTRY string = containerApps.outputs.registryLoginServer
